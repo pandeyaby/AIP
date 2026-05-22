@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>AI Industrial Revolution Portfolio — Q2 2026</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="data.js"></script>
+<style>
+  :root { --accent: #6366f1; }
+  body { background: #0a0a0f; color: #e2e8f0; font-family: 'Inter', system-ui, sans-serif; }
+  .card { background: #111827; border: 1px solid #1f2937; border-radius: 12px; }
+  .tab-btn { padding: 8px 18px; border-radius: 8px; cursor: pointer; transition: all 0.2s; color: #9ca3af; font-size: 14px; font-weight: 500; }
+  .tab-btn.active { background: #6366f1; color: white; }
+  .tab-btn:hover:not(.active) { background: #1f2937; color: #e2e8f0; }
+  .tab-panel { display: none; }
+  .tab-panel.active { display: block; }
+  .badge { display: inline-block; padding: 2px 8px; border-radius: 6px; font-size: 11px; font-weight: 600; }
+  .badge-extreme { background: #7f1d1d; color: #fca5a5; }
+  .badge-rich { background: #312e81; color: #a5b4fc; }
+  .badge-moderate { background: #1e3a5f; color: #93c5fd; }
+  .badge-cheaper { background: #14532d; color: #6ee7b7; }
+  .badge-speculative { background: #4a044e; color: #f0abfc; }
+  .badge-pre-rev { background: #1c1917; color: #d6d3d1; }
+  .glow { box-shadow: 0 0 20px rgba(99,102,241,0.2); }
+  table { border-collapse: collapse; width: 100%; }
+  th { text-align: left; padding: 10px 12px; font-size: 12px; font-weight: 600; color: #6b7280; border-bottom: 1px solid #1f2937; }
+  td { padding: 9px 12px; font-size: 13px; border-bottom: 1px solid #111827; }
+  tr:hover td { background: #0f172a; }
+  .scroll-table { overflow-x: auto; }
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: #111827; }
+  ::-webkit-scrollbar-thumb { background: #374151; border-radius: 3px; }
+</style>
+</head>
+<body class="min-h-screen">
+
+<!-- Header -->
+<div class="border-b border-gray-800 px-6 py-4 flex items-center justify-between sticky top-0 z-50" style="background:#0a0a0f">
+  <div class="flex items-center gap-3">
+    <div class="text-2xl">🤖</div>
+    <div>
+      <div class="font-bold text-white text-lg">AI Industrial Revolution</div>
+      <div class="text-xs text-gray-500" id="subtitle">Portfolio · Monte Carlo Sector Rotation</div>
+    </div>
+  </div>
+  <div class="flex items-center gap-3">
+    <div class="text-sm font-semibold text-indigo-400" id="quarter-badge"></div>
+    <div class="text-xs text-gray-600" id="generated-at"></div>
+  </div>
+</div>
+
+<!-- Tabs -->
+<div class="px-6 pt-4 flex gap-2 border-b border-gray-800 pb-0 flex-wrap">
+  <button class="tab-btn active" onclick="switchTab('dashboard',this)">Dashboard</button>
+  <button class="tab-btn" onclick="switchTab('allocation',this)">Allocation</button>
+  <button class="tab-btn" onclick="switchTab('montecarlo',this)">Monte Carlo</button>
+  <button class="tab-btn" onclick="switchTab('holdings',this)">Holdings</button>
+  <button class="tab-btn" onclick="switchTab('returns',this)">Returns</button>
+</div>
+
+<!-- ─── DASHBOARD ──────────────────────────────────────────── -->
+<div id="tab-dashboard" class="tab-panel active p-6">
+
+  <!-- KPIs -->
+  <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+    <div class="card p-4 glow">
+      <div class="text-xs text-gray-500 mb-1">Best Sector Tilt</div>
+      <div class="text-xl font-bold text-indigo-400" id="kpi-sector">—</div>
+    </div>
+    <div class="card p-4">
+      <div class="text-xs text-gray-500 mb-1">Expected Return (ann.)</div>
+      <div class="text-xl font-bold text-emerald-400" id="kpi-return">—</div>
+    </div>
+    <div class="card p-4">
+      <div class="text-xs text-gray-500 mb-1">Best Sharpe Ratio</div>
+      <div class="text-xl font-bold text-cyan-400" id="kpi-sharpe">—</div>
+    </div>
+    <div class="card p-4">
+      <div class="text-xs text-gray-500 mb-1">P5 → P95 Return</div>
+      <div class="text-xl font-bold text-purple-400" id="kpi-range">—</div>
+    </div>
+  </div>
+
+  <!-- Tilt Comparison -->
+  <div class="mb-6">
+    <div class="text-sm font-semibold text-gray-400 mb-3 uppercase tracking-wider">Quarterly Sector Tilt Comparison</div>
+    <div id="tilt-cards" class="grid grid-cols-2 lg:grid-cols-4 gap-4"></div>
+  </div>
+
+  <!-- Charts + Top 10 -->
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
+    <div class="card p-4">
+      <div class="text-sm font-semibold text-gray-400 mb-4 uppercase tracking-wider">Sector Allocation</div>
+      <div style="height:260px;position:relative"><canvas id="sectorChart"></canvas></div>
+    </div>
+    <div class="card p-4">
+      <div class="text-sm font-semibold text-gray-400 mb-3 uppercase tracking-wider">Top 10 Positions</div>
+      <div id="top10" class="space-y-2"></div>
+    </div>
+  </div>
+
+  <!-- Disclaimer -->
+  <div class="card p-4 border-yellow-900">
+    <div class="text-xs text-yellow-600">⚠️ This is a quantitative tool for research purposes only. Not investment advice. Monte Carlo simulations use historical data and cannot predict future returns. Past performance does not guarantee future results. Always consult a licensed financial advisor before making investment decisions.</div>
+  </div>
+</div>
+
+<!-- ─── ALLOCATION ───────────────────────────────────────── -->
+<div id="tab-allocation" class="tab-panel p-6">
+  <div class="flex items-center justify-between mb-4 flex-wrap gap-3">
+    <div>
+      <div class="text-lg font-bold text-white" id="alloc-quarter-title">Quarterly Allocation</div>
+      <div class="text-sm text-gray-500 mt-1">Monte Carlo optimized weights with sector tilt</div>
+    </div>
+    <div class="flex gap-3 items-center">
+      <label class="text-sm text-gray-400">Portfolio $</label>
+      <input id="port-size" type="number" value="100000" min="1000" oninput="renderAllocTable()"
+        class="bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm w-32" />
+    </div>
+  </div>
+  <div class="card"><div class="scroll-table">
+    <table><thead><tr>
+      <th>#</th><th>Ticker</th><th>Company</th><th>Sector</th><th>Layer</th>
+      <th>Moat</th><th>Valuation</th><th>Weight %</th><th>$ Amount</th><th>Price</th>
+    </tr></thead>
+    <tbody id="alloc-tbody"></tbody></table>
+  </div></div>
+</div>
+
+<!-- ─── MONTE CARLO ─────────────────────────────────────── -->
+<div id="tab-montecarlo" class="tab-panel p-6">
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
+    <div class="card p-4"><div class="text-xs text-gray-500 mb-1">Simulations Run</div>
+      <div class="text-2xl font-bold text-indigo-400" id="mc-sims">—</div></div>
+    <div class="card p-4"><div class="text-xs text-gray-500 mb-1">Valid Tickers</div>
+      <div class="text-2xl font-bold text-cyan-400" id="mc-tickers">—</div></div>
+    <div class="card p-4"><div class="text-xs text-gray-500 mb-1">Best Sharpe Found</div>
+      <div class="text-2xl font-bold text-emerald-400" id="mc-sharpe">—</div></div>
+  </div>
+  <div class="card p-4 mb-4">
+    <div class="text-sm font-semibold text-gray-400 mb-4 uppercase tracking-wider">Efficient Frontier — Monte Carlo Cloud (8,000 portfolios)</div>
+    <div style="height:420px;position:relative"><canvas id="mcChart"></canvas></div>
+    <div class="text-xs text-gray-600 mt-2 text-center">X = Annual Volatility | Y = Annual Return | Color = Sharpe Ratio</div>
+  </div>
+  <div class="card p-4">
+    <div class="text-sm font-semibold text-gray-400 mb-4 uppercase tracking-wider">Return Distribution (Percentiles)</div>
+    <div style="height:200px;position:relative"><canvas id="distChart"></canvas></div>
+  </div>
+</div>
+
+<!-- ─── HOLDINGS ──────────────────────────────────────────── -->
+<div id="tab-holdings" class="tab-panel p-6">
+  <div class="flex flex-wrap gap-3 mb-4 items-center">
+    <input id="h-search" placeholder="Search ticker or name..." oninput="filterHoldings()"
+      class="bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm w-64" />
+    <select id="h-sector" onchange="filterHoldings()"
+      class="bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm">
+      <option value="">All Sectors</option>
+      <option value="core_ai">Core AI Stack</option>
+      <option value="optics">Optics & Photonics</option>
+      <option value="quantum">Quantum Computing</option>
+      <option value="utilities">Utilities & Power</option>
+    </select>
+    <select id="h-moat" onchange="filterHoldings()"
+      class="bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm">
+      <option value="0">All Moats</option>
+      <option value="4">Moat ≥ 4</option>
+      <option value="5">Moat = 5</option>
+    </select>
+    <div class="text-sm text-gray-400 ml-auto" id="h-count">— companies</div>
+  </div>
+  <div class="card"><div class="scroll-table">
+    <table><thead><tr>
+      <th>Ticker</th><th>Company</th><th>Sector</th><th>Layer</th>
+      <th>Moat</th><th>Valuation</th><th>Mkt Cap</th><th>AI Exp.</th><th>Thesis</th>
+    </tr></thead>
+    <tbody id="h-tbody"></tbody></table>
+  </div></div>
+</div>
+
+<!-- ─── RETURNS ────────────────────────────────────────────── -->
+<div id="tab-returns" class="tab-panel p-6">
+  <div class="text-lg font-bold text-white mb-4">Last Quarter Performance</div>
+  <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6" id="ret-sector-cards"></div>
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
+    <div class="card p-4">
+      <div class="text-sm font-semibold text-gray-400 mb-3 uppercase tracking-wider">🏆 Top 15</div>
+      <div class="scroll-table" style="max-height:340px">
+        <table><thead><tr><th>Ticker</th><th>Company</th><th>Sector</th><th>Q Return</th></tr></thead>
+        <tbody id="top-tbody"></tbody></table>
+      </div>
+    </div>
+    <div class="card p-4">
+      <div class="text-sm font-semibold text-gray-400 mb-3 uppercase tracking-wider">📉 Bottom 10</div>
+      <div class="scroll-table" style="max-height:340px">
+        <table><thead><tr><th>Ticker</th><th>Company</th><th>Sector</th><th>Q Return</th></tr></thead>
+        <tbody id="bot-tbody"></tbody></table>
+      </div>
+    </div>
+  </div>
+  <div class="card p-4">
+    <div class="text-sm font-semibold text-gray-400 mb-4 uppercase tracking-wider">Sector Returns</div>
+    <div style="height:200px;position:relative"><canvas id="retChart"></canvas></div>
+  </div>
+</div>
+
+<script>
+const D = window.PORTFOLIO_DATA;
+const sim = D.sim;
+const companies = D.companies;
+const returnsData = D.returns;
+
+const SECTOR_LABELS = { core_ai:'Core AI Stack', optics:'Optics & Photonics', quantum:'Quantum Computing', utilities:'Utilities & Power' };
+const SECTOR_COLORS = { core_ai:'#818cf8', optics:'#22d3ee', quantum:'#a78bfa', utilities:'#34d399' };
+
+let sectorChart=null, mcChart=null, distChart=null, retChart=null;
+
+// ─── Init ────────────────────────────────────────────────
+function init() {
+  document.getElementById('subtitle').textContent = `${companies.length} companies · Monte Carlo Sector Rotation`;
+  document.getElementById('quarter-badge').textContent = sim.quarter;
+  const d = new Date(D.generated_at);
+  document.getElementById('generated-at').textContent = `Updated ${d.toLocaleDateString()}`;
+
+  renderDashboard();
+  renderAllocTable();
+  renderHoldings(companies);
+  renderReturns();
+  renderMC();
+}
+
+// ─── Tab ─────────────────────────────────────────────────
+function switchTab(name, btn) {
+  document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('tab-'+name).classList.add('active');
+  btn.classList.add('active');
+}
+
+// ─── Dashboard ───────────────────────────────────────────
+function renderDashboard() {
+  const mc = sim.mc_summary;
+  const sector = sim.best_sector_tilt;
+  document.getElementById('kpi-sector').textContent = SECTOR_LABELS[sector]||sector;
+  document.getElementById('kpi-return').textContent = mc.expected_return_pct+'%';
+  document.getElementById('kpi-sharpe').textContent = mc.best_sharpe;
+  document.getElementById('kpi-range').textContent = `${mc.p5_return_pct}% → ${mc.p95_return_pct}%`;
+
+  // Tilt cards
+  const tilts = sim.tilt_comparison||[];
+  document.getElementById('tilt-cards').innerHTML = tilts.map(t=>`
+    <div class="card p-4 ${t.is_best?'glow border border-indigo-600':''}">
+      <div class="flex items-center justify-between mb-2">
+        <div class="text-sm font-bold" style="color:${SECTOR_COLORS[t.sector]||'#9ca3af'}">${SECTOR_LABELS[t.sector]||t.sector}</div>
+        ${t.is_best?'<div class="badge" style="background:#312e81;color:#a5b4fc">BEST Q</div>':''}
+      </div>
+      <div class="text-2xl font-bold text-white mb-1">${t.sharpe.toFixed(2)}</div>
+      <div class="text-xs text-gray-400 mb-2">Sharpe Ratio</div>
+      <div class="text-sm"><span class="text-emerald-400 font-semibold">${t.expected_return_pct}%</span> <span class="text-gray-500 text-xs">expected</span></div>
+      <div class="text-xs text-gray-500">${t.sector_allocation_pct}% sector weight</div>
+    </div>`).join('');
+
+  // Sector donut
+  const sw = sim.sector_summary||{};
+  if(sectorChart) sectorChart.destroy();
+  sectorChart = new Chart(document.getElementById('sectorChart').getContext('2d'),{
+    type:'doughnut',
+    data:{labels:Object.keys(sw).map(s=>SECTOR_LABELS[s]||s),
+          datasets:[{data:Object.values(sw),backgroundColor:Object.keys(sw).map(s=>SECTOR_COLORS[s]||'#6b7280'),borderWidth:0}]},
+    options:{responsive:true,maintainAspectRatio:false,cutout:'65%',
+             plugins:{legend:{position:'bottom',labels:{color:'#9ca3af',font:{size:11},padding:12}},
+                      tooltip:{callbacks:{label:(ctx)=>` ${ctx.label}: ${ctx.raw.toFixed(1)}%`}}}}
+  });
+
+  // Top 10
+  const top10 = (sim.allocations||[]).slice(0,10);
+  document.getElementById('top10').innerHTML = top10.map((a,i)=>`
+    <div class="flex items-center justify-between py-1">
+      <div class="flex items-center gap-2">
+        <div class="text-xs text-gray-600 w-4">${i+1}</div>
+        <div class="font-mono font-bold text-white text-sm">${a.ticker}</div>
+        <div class="text-xs text-gray-400 truncate max-w-32">${a.company}</div>
+      </div>
+      <div class="flex items-center gap-2">
+        <span style="color:${SECTOR_COLORS[a.sector]}" class="text-xs">●</span>
+        <div class="text-sm font-semibold text-indigo-300">${a.weight}%</div>
+      </div>
+    </div>`).join('');
+}
+
+// ─── Allocation ──────────────────────────────────────────
+function renderAllocTable() {
+  const size = parseFloat(document.getElementById('port-size')?.value)||100000;
+  document.getElementById('alloc-quarter-title').textContent = `${sim.quarter} Quarterly Allocation`;
+  const tbody = document.getElementById('alloc-tbody');
+  tbody.innerHTML = (sim.allocations||[]).map((a,i)=>{
+    const vb = (a.valuation||'').toLowerCase().replace(/\s+/g,'-');
+    const stars = '★'.repeat(a.moat)+'☆'.repeat(5-a.moat);
+    const dollars = Math.round(a.weight/100*size);
+    const price = a.price ? '$'+a.price.toFixed(2) : '—';
+    return `<tr>
+      <td class="text-gray-500">${i+1}</td>
+      <td><span class="font-mono font-bold text-white">${a.ticker}</span></td>
+      <td class="text-gray-300">${a.company}</td>
+      <td style="color:${SECTOR_COLORS[a.sector]}" class="text-xs">${SECTOR_LABELS[a.sector]?.replace('Core AI Stack','Core AI')||a.sector}</td>
+      <td class="text-xs text-gray-400">${(a.layer||'').replace(/^L\d+ /,'')}</td>
+      <td class="text-xs" style="color:#f59e0b">${stars}</td>
+      <td><span class="badge badge-${vb}">${a.valuation}</span></td>
+      <td class="font-semibold text-indigo-300">${a.weight}%</td>
+      <td class="text-emerald-400">$${dollars.toLocaleString()}</td>
+      <td class="text-gray-400">${price}</td>
+    </tr>`;
+  }).join('');
+}
+
+// ─── Monte Carlo ─────────────────────────────────────────
+function renderMC() {
+  const mc = sim.mc_summary;
+  document.getElementById('mc-sims').textContent = (mc.n_simulations||0).toLocaleString();
+  document.getElementById('mc-tickers').textContent = sim.n_valid_tickers||'—';
+  document.getElementById('mc-sharpe').textContent = mc.best_sharpe||'—';
+
+  const cloud = sim.mc_cloud||{};
+  const returns = cloud.returns||[], vols = cloud.vols||[], sharpes = cloud.sharpes||[];
+  const minS = Math.min(...sharpes), maxS = Math.max(...sharpes);
+
+  if(mcChart) mcChart.destroy();
+  mcChart = new Chart(document.getElementById('mcChart').getContext('2d'),{
+    type:'scatter',
+    data:{datasets:[{label:'Portfolio',
+      data:returns.map((r,i)=>({x:vols[i],y:r})),
+      pointRadius:2.5,
+      pointBackgroundColor:sharpes.map(s=>{
+        const t=(s-minS)/(maxS-minS+0.0001);
+        return `rgba(${Math.round(99+119*t)},${Math.round(102+108*t)},${Math.round(241-207*t)},0.55)`;
+      }),
+    }]},
+    options:{responsive:true,maintainAspectRatio:false,
+      scales:{
+        x:{title:{display:true,text:'Annual Volatility (%)',color:'#6b7280'},ticks:{color:'#6b7280'},grid:{color:'#1f2937'}},
+        y:{title:{display:true,text:'Annual Return (%)',color:'#6b7280'},ticks:{color:'#6b7280'},grid:{color:'#1f2937'}},
+      },
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:(ctx)=>`Return: ${ctx.raw.y.toFixed(1)}% | Vol: ${ctx.raw.x.toFixed(1)}%`}}},
+    }
+  });
+
+  if(distChart) distChart.destroy();
+  distChart = new Chart(document.getElementById('distChart').getContext('2d'),{
+    type:'bar',
+    data:{labels:['P5 (Bear)','P25','P50 Median','P75','P95 (Bull)'],
+          datasets:[{data:[mc.p5_return_pct,
+                           mc.p5_return_pct+(mc.p50_return_pct-mc.p5_return_pct)*0.4,
+                           mc.p50_return_pct,
+                           mc.p50_return_pct+(mc.p95_return_pct-mc.p50_return_pct)*0.5,
+                           mc.p95_return_pct],
+                     backgroundColor:['#f43f5e','#fb923c','#6366f1','#22d3ee','#10b981'],borderRadius:6}]},
+    options:{responsive:true,maintainAspectRatio:false,
+             plugins:{legend:{display:false}},
+             scales:{x:{ticks:{color:'#6b7280'},grid:{display:false}},
+                     y:{title:{display:true,text:'Annual Return (%)',color:'#6b7280'},ticks:{color:'#6b7280'},grid:{color:'#1f2937'}}}}
+  });
+}
+
+// ─── Holdings ────────────────────────────────────────────
+function renderHoldings(list) {
+  document.getElementById('h-count').textContent = `${list.length} companies`;
+  document.getElementById('h-tbody').innerHTML = list.map(c=>{
+    const vb=(c.valuation||'').toLowerCase().replace(/\s+/g,'-');
+    const stars='★'.repeat(c.moat)+'☆'.repeat(5-c.moat);
+    return `<tr>
+      <td><span class="font-mono font-bold text-white">${c.ticker}</span></td>
+      <td class="text-gray-300">${c.company}</td>
+      <td style="color:${SECTOR_COLORS[c.sector]}" class="text-xs">${SECTOR_LABELS[c.sector]?.split(' ')[0]||c.sector}</td>
+      <td class="text-xs text-gray-400">${(c.layer||'').replace(/^L\d+ /,'')}</td>
+      <td class="text-xs" style="color:#f59e0b">${stars}</td>
+      <td><span class="badge badge-${vb}">${c.valuation||'—'}</span></td>
+      <td class="text-gray-400 text-xs">${c.mkt_cap_b>0?'$'+c.mkt_cap_b+'B':'—'}</td>
+      <td class="text-xs text-gray-400">${c.ai_exposure||'—'}</td>
+      <td class="text-xs text-gray-500 max-w-xs truncate" title="${c.thesis}">${(c.thesis||'—').substring(0,75)}</td>
+    </tr>`;
+  }).join('');
+}
+
+function filterHoldings() {
+  const q=document.getElementById('h-search').value.toLowerCase();
+  const sector=document.getElementById('h-sector').value;
+  const minMoat=parseInt(document.getElementById('h-moat').value)||0;
+  renderHoldings(companies.filter(c=>
+    (!q||c.ticker.toLowerCase().includes(q)||c.company.toLowerCase().includes(q))&&
+    (!sector||c.sector===sector)&&(c.moat>=minMoat)));
+}
+
+// ─── Returns ─────────────────────────────────────────────
+function renderReturns() {
+  const ret = returnsData;
+  const sa = ret.sector_avg_quarterly_pct||{};
+
+  document.getElementById('ret-sector-cards').innerHTML = Object.entries(sa).map(([s,r])=>`
+    <div class="card p-4">
+      <div class="text-xs font-medium mb-1" style="color:${SECTOR_COLORS[s]}">${SECTOR_LABELS[s]||s}</div>
+      <div class="text-2xl font-bold ${r>=0?'text-emerald-400':'text-red-400'}">${r>=0?'+':''}${r}%</div>
+      <div class="text-xs text-gray-500 mt-1">Last quarter (log returns)</div>
+    </div>`).join('');
+
+  document.getElementById('top-tbody').innerHTML = (ret.top_performers||[]).slice(0,15).map(p=>`
+    <tr>
+      <td class="font-mono font-bold text-white">${p.ticker}</td>
+      <td class="text-gray-300">${p.company}</td>
+      <td class="text-xs" style="color:${SECTOR_COLORS[p.sector]}">${SECTOR_LABELS[p.sector]?.split(' ')[0]}</td>
+      <td class="font-semibold ${p.quarterly_return_pct>=0?'text-emerald-400':'text-red-400'}">
+        ${p.quarterly_return_pct>=0?'+':''}${p.quarterly_return_pct}%</td>
+    </tr>`).join('');
+
+  document.getElementById('bot-tbody').innerHTML = (ret.bottom_performers||[]).map(p=>`
+    <tr>
+      <td class="font-mono font-bold text-white">${p.ticker}</td>
+      <td class="text-gray-300">${p.company}</td>
+      <td class="text-xs" style="color:${SECTOR_COLORS[p.sector]}">${SECTOR_LABELS[p.sector]?.split(' ')[0]}</td>
+      <td class="font-semibold text-red-400">${p.quarterly_return_pct}%</td>
+    </tr>`).join('');
+
+  const secLabels = Object.keys(sa).map(s=>SECTOR_LABELS[s]||s);
+  const secVals = Object.values(sa);
+  if(retChart) retChart.destroy();
+  retChart = new Chart(document.getElementById('retChart').getContext('2d'),{
+    type:'bar', indexAxis:'y',
+    data:{labels:secLabels,datasets:[{data:secVals,backgroundColor:Object.keys(sa).map(s=>SECTOR_COLORS[s]||'#6b7280'),borderRadius:6}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},
+             scales:{x:{ticks:{color:'#6b7280',callback:v=>v+'%'},grid:{color:'#1f2937'}},y:{ticks:{color:'#9ca3af'},grid:{display:false}}}}
+  });
+}
+
+init();
+</script>
+</body>
+</html>
